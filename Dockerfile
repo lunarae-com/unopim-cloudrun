@@ -14,7 +14,16 @@ FROM node:20-alpine AS assets
 WORKDIR /app
 COPY --from=vendor /app /app
 
-RUN set -eux;   THEME_DIR="$(find /app -type d -path '*/public/themes/shopify' 2>/dev/null | head -n 1 || true)";   if [ -z "$THEME_DIR" ]; then     echo "ERROR: Could not find public/themes/shopify inside /app";     exit 1;   fi;   cd "$THEME_DIR";   if [ -f package-lock.json ]; then npm ci; else npm install; fi;   npm run build;   test -f build/manifest.json
+# Build Laravel/Vite frontend assets
+RUN set -eux; \
+  if [ -f /app/package.json ]; then \
+    cd /app; \
+    if [ -f package-lock.json ]; then npm ci; else npm install; fi; \
+    npm run build; \
+    test -f /app/public/build/manifest.json; \
+  else \
+    echo "No package.json found; skipping asset build."; \
+  fi
 
 # ---------- Runtime stage ----------
 FROM php:8.2-fpm-alpine
