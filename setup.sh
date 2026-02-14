@@ -31,6 +31,7 @@ echo "Creating Cloud SQL instance (if not exists)..."
 gcloud sql instances create "$SQL_INSTANCE_NAME" \
   --database-version=POSTGRES_18 \
   --region="$REGION" \
+  --edition=ENTERPRISE \
   --cpu=2 --memory=8GB \
   --storage-type=SSD --storage-size=50 2>/dev/null || true
 
