@@ -1,0 +1,50 @@
+substitutions:
+  _REGION: us-central1
+  _AR_REPO: unopim
+  _APP: unopim
+  _SQL_INSTANCE: unopim-pg
+  _DB_NAME: unopim
+  _DB_USER: unopim
+  _RUN_SA: unopim-run-sa
+  _SERVICE_WEB: unopim-web
+  _SERVICE_WORKER: unopim-worker
+
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: ["build", "-t", "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/${_APP}:$SHORT_SHA", "."]
+
+  - name: gcr.io/cloud-builders/docker
+    args: ["push", "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/${_APP}:$SHORT_SHA"]
+
+  # Deploy web
+  - name: gcr.io/cloud-builders/gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE_WEB}
+      - --region=${_REGION}
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/${_APP}:$SHORT_SHA
+      - --service-account=${_RUN_SA}@$PROJECT_ID.iam.gserviceaccount.com
+      - --allow-unauthenticated
+      - --add-cloudsql-instances=$PROJECT_ID:${_REGION}:${_SQL_INSTANCE}
+      - --set-env-vars=APP_ENV=production,APP_DEBUG=false,DB_CONNECTION=pgsql,DB_HOST=/cloudsql/$PROJECT_ID:${_REGION}:${_SQL_INSTANCE},DB_PORT=5432,DB_DATABASE=${_DB_NAME},DB_USERNAME=${_DB_USER}
+      - --set-secrets=DB_PASSWORD=unopim-db-password:latest,APP_KEY=unopim-app-key:latest
+
+  # Deploy worker
+  - name: gcr.io/cloud-builders/gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE_WORKER}
+      - --region=${_REGION}
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/${_APP}:$SHORT_SHA
+      - --service-account=${_RUN_SA}@$PROJECT_ID.iam.gserviceaccount.com
+      - --no-allow-unauthenticated
+      - --add-cloudsql-instances=$PROJECT_ID:${_REGION}:${_SQL_INSTANCE}
+      - --command=php
+      - --args=artisan,queue:work,--sleep=3,--tries=3,--timeout=120
+      - --set-env-vars=APP_ENV=production,APP_DEBUG=false,DB_CONNECTION=pgsql,DB_HOST=/cloudsql/$PROJECT_ID:${_REGION}:${_SQL_INSTANCE},DB_PORT=5432,DB_DATABASE=${_DB_NAME},DB_USERNAME=${_DB_USER}
+      - --set-secrets=DB_PASSWORD=unopim-db-password:latest,APP_KEY=unopim-app-key:latest
+
+images:
+  - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/${_APP}:$SHORT_SHA"
