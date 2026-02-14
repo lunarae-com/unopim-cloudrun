@@ -56,21 +56,21 @@ gcloud run deploy unopim-web \
   ${BUCKET:+--set-env-vars "GCS_BUCKET=${BUCKET}"}
 
 # ---- deploy worker ----
-echo "Deploying Cloud Run service: unopim-worker"
-gcloud run deploy unopim-worker \
+echo "Creating/Updating Cloud Run Job: unopim-worker"
+
+gcloud run jobs delete unopim-worker --region "${REGION}" --quiet 2>/dev/null || true
+
+gcloud run jobs create unopim-worker \
   --image "${IMAGE_URI}" \
   --region "${REGION}" \
-  --platform managed \
   --service-account "${RUN_SA}" \
-  --no-allow-unauthenticated \
-  --min-instances 1 \
   --add-cloudsql-instances "${CLOUDSQL_INSTANCE}" \
   --set-secrets "DB_PASSWORD=unopim-db-password:latest,APP_KEY=unopim-app-key:latest" \
   --set-env-vars "APP_ENV=production,APP_DEBUG=false,LOG_CHANNEL=stderr,LOG_LEVEL=info" \
   --set-env-vars "DB_CONNECTION=pgsql,DB_HOST=/cloudsql/${CLOUDSQL_INSTANCE},DB_PORT=5432,DB_DATABASE=${DB_NAME},DB_USERNAME=${DB_USER}" \
-  ${BUCKET:+--set-env-vars "GCS_BUCKET=${BUCKET}"} \
   --command php \
   --args artisan,queue:work,--sleep=3,--tries=3,--timeout=120
+
 
 echo ""
 WEB_URL="$(gcloud run services describe unopim-web --region "${REGION}" --format='value(status.url)')"
