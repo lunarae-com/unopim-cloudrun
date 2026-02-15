@@ -14,15 +14,26 @@ FROM node:20-alpine AS assets
 WORKDIR /app
 COPY --from=vendor /app /app
 
-# Build Laravel/Vite frontend assets
 RUN set -eux; \
+  # Build root assets (if exist)
   if [ -f /app/package.json ]; then \
     cd /app; \
     if [ -f package-lock.json ]; then npm ci; else npm install; fi; \
+    npm run build || true; \
+  fi; \
+  \
+  # Build installer theme
+  if [ -f /app/public/themes/installer/default/package.json ]; then \
+    cd /app/public/themes/installer/default; \
+    if [ -f package-lock.json ]; then npm ci; else npm install; fi; \
     npm run build; \
-    test -f /app/public/build/manifest.json; \
-  else \
-    echo "No package.json found; skipping asset build."; \
+  fi; \
+  \
+  # Build admin theme
+  if [ -f /app/public/themes/admin/default/package.json ]; then \
+    cd /app/public/themes/admin/default; \
+    if [ -f package-lock.json ]; then npm ci; else npm install; fi; \
+    npm run build; \
   fi
 
 # ---------- Runtime stage ----------
