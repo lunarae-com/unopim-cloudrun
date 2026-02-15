@@ -38,7 +38,7 @@ COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY docker/supervisord.conf /etc/supervisord.conf
 COPY docker/php-fpm.conf /usr/local/etc/php-fpm.d/zz-cloudrun.conf
 
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache  && mkdir -p /run/php  && chown -R www-data:www-data /run/php
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache  
 
 ENV APP_ENV=production
 ENV APP_DEBUG=false
