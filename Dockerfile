@@ -39,7 +39,7 @@ RUN set -eux; \
 # ---------- Runtime stage ----------
 FROM php:8.2-fpm-alpine
 
-RUN apk add --no-cache nginx supervisor bash \
+RUN apk add --no-cache nginx supervisor bash busybox-extras \
     icu-dev libzip-dev oniguruma-dev \
     postgresql-dev mariadb-dev \
     freetype-dev libjpeg-turbo-dev libpng-dev libwebp-dev \
@@ -48,6 +48,8 @@ RUN apk add --no-cache nginx supervisor bash \
     pdo pdo_pgsql pdo_mysql \
     intl gd zip opcache calendar \
   && sed -i 's|^listen = .*|listen = 0.0.0.0:9000|' /usr/local/etc/php-fpm.d/www.conf
+
+RUN cp /etc/nginx/mime.types /etc/nginx/mime.types || true
 
 
 WORKDIR /var/www/html
