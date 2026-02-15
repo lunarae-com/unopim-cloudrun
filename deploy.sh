@@ -40,7 +40,7 @@ gcloud config set project "${PROJECT_ID}" >/dev/null
 echo "Building container with Cloud Build..."
 gcloud builds submit --tag "${IMAGE_URI}"
 
-# ---- deploy web service ----
+# ---- deploy web service (first pass) ----
 echo "Deploying Cloud Run service: unopim-web"
 gcloud run deploy unopim-web \
   --image "${IMAGE_URI}" \
@@ -55,6 +55,15 @@ gcloud run deploy unopim-web \
   --set-env-vars "DB_CONNECTION=pgsql,DB_HOST=/cloudsql/${CLOUDSQL_INSTANCE},DB_PORT=5432,DB_DATABASE=${DB_NAME},DB_USERNAME=${DB_USER}" \
   ${BUCKET:+--set-env-vars "GCS_BUCKET=${BUCKET}"}
 
+# ---- fetch URL, then set APP_URL dynamically ----
+WEB_URL="$(gcloud run services describe unopim-web --region "${REGION}" --format='value(status.url)')"
+echo "unopim-web URL detected: ${WEB_URL}"
+
+echo "Updating unopim-web APP_URL to ${WEB_URL} ..."
+gcloud run services update unopim-web \
+  --region "${REGION}" \
+  --set-env-vars "APP_URL=${WEB_URL}"
+
 # ---- deploy worker as Cloud Run Job ----
 echo "Creating/Updating Cloud Run Job: unopim-worker"
 
@@ -66,12 +75,11 @@ gcloud run jobs create unopim-worker \
   --service-account "${RUN_SA}" \
   --set-cloudsql-instances "${CLOUDSQL_INSTANCE}" \
   --set-secrets "DB_PASSWORD=unopim-db-password:latest,APP_KEY=unopim-app-key:latest" \
-  --set-env-vars "APP_ENV=production,APP_DEBUG=false,LOG_CHANNEL=stderr,LOG_LEVEL=info" \
+  --set-env-vars "APP_ENV=production,APP_DEBUG=false,LOG_CHANNEL=stderr,LOG_LEVEL=info,APP_URL=${WEB_URL}" \
   --set-env-vars "DB_CONNECTION=pgsql,DB_HOST=/cloudsql/${CLOUDSQL_INSTANCE},DB_PORT=5432,DB_DATABASE=${DB_NAME},DB_USERNAME=${DB_USER}" \
   --command php \
   --args artisan,queue:work,--sleep=3,--tries=3,--timeout=120
 
 echo ""
-WEB_URL="$(gcloud run services describe unopim-web --region "${REGION}" --format='value(status.url)')"
 echo "Done."
 echo "unopim-web URL: ${WEB_URL}"

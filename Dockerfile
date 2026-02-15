@@ -50,6 +50,8 @@ RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cac
 
 ENV APP_ENV=production
 ENV APP_DEBUG=false
+ENV TRUSTED_PROXIES="*"
+
 
 EXPOSE 8080
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
