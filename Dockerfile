@@ -63,15 +63,16 @@ RUN apk add --no-cache \
     pdo pdo_pgsql pdo_mysql \
     intl gd zip opcache calendar \
   \
-  # ✅ Make php-fpm listen on TCP 127.0.0.1:9000 (matches nginx fastcgi_pass 127.0.0.1:9000)
+  # Ensure php-fpm listens on TCP 127.0.0.1:9000 (nginx uses fastcgi_pass 127.0.0.1:9000)
   && sed -i 's|^listen = .*|listen = 127.0.0.1:9000|' /usr/local/etc/php-fpm.d/www.conf \
+  && sed -i 's|^;clear_env = no|clear_env = no|' /usr/local/etc/php-fpm.d/www.conf \
   \
-  # ✅ Ensure Cloud Run env vars are available to PHP
-  && sed -i 's|^;clear_env = no|clear_env = no|' /usr/local/etc/php-fpm.d/www.conf
+  # Make sure nginx has mime.types (Alpine nginx package provides it)
+  && test -f /etc/nginx/mime.types
 
 WORKDIR /var/www/html
 
-# Copy FULL built app (including built theme assets)
+# Copy FULL built app
 COPY --from=assets /app /var/www/html
 
 # Your configs
