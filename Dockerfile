@@ -59,10 +59,12 @@ RUN apk add --no-cache nginx supervisor bash busybox-extras \
   && docker-php-ext-install \
     pdo pdo_pgsql pdo_mysql \
     intl gd zip opcache calendar \
-  # Ensure php-fpm listens on TCP 9000 for nginx fastcgi_pass 127.0.0.1:9000
+  \
+  # ✅ IMPORTANT: make php-fpm listen where nginx expects it
   && sed -i 's|^listen = .*|listen = 127.0.0.1:9000|' /usr/local/etc/php-fpm.d/www.conf \
+  \
+  # (optional but commonly helpful on Cloud Run)
   && sed -i 's|^;clear_env = no|clear_env = no|' /usr/local/etc/php-fpm.d/www.conf
-
 
 WORKDIR /var/www/html
 
