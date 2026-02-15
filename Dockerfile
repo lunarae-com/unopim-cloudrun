@@ -28,17 +28,25 @@ RUN set -eux; \
 # ---------- Runtime stage ----------
 FROM php:8.2-fpm-alpine
 
-RUN apk add --no-cache nginx supervisor bash     icu-dev libzip-dev oniguruma-dev     postgresql-dev mariadb-dev     freetype-dev libjpeg-turbo-dev libpng-dev libwebp-dev   && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp   && docker-php-ext-install     pdo pdo_pgsql pdo_mysql     intl gd zip opcache calendar
+RUN apk add --no-cache nginx supervisor bash \
+    icu-dev libzip-dev oniguruma-dev \
+    postgresql-dev mariadb-dev \
+    freetype-dev libjpeg-turbo-dev libpng-dev libwebp-dev \
+  && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+  && docker-php-ext-install \
+    pdo pdo_pgsql pdo_mysql \
+    intl gd zip opcache calendar
 
 WORKDIR /var/www/html
-COPY --from=vendor /app /var/www/html
-COPY --from=assets /app/public/themes /var/www/html/public/themes
+
+# Copy FULL built app (not partial themes)
+COPY --from=assets /app /var/www/html
 
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY docker/supervisord.conf /etc/supervisord.conf
 COPY docker/php-fpm.conf /usr/local/etc/php-fpm.d/zz-cloudrun.conf
 
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache  
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
 ENV APP_ENV=production
 ENV APP_DEBUG=false
