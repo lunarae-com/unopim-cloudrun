@@ -46,7 +46,9 @@ RUN apk add --no-cache nginx supervisor bash \
   && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
   && docker-php-ext-install \
     pdo pdo_pgsql pdo_mysql \
-    intl gd zip opcache calendar
+    intl gd zip opcache calendar \
+  && sed -i 's|^listen = .*|listen = 0.0.0.0:9000|' /usr/local/etc/php-fpm.d/www.conf
+
 
 WORKDIR /var/www/html
 
