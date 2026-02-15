@@ -13,14 +13,13 @@ RUN apk add --no-cache \
     zip gd
 
 RUN curl -sS https://getcomposer.org/installer | php -- \
-  --install-dir=/usr/local/bin --filename=composer
+    --install-dir=/usr/local/bin --filename=composer
 
 WORKDIR /app
 
 RUN composer create-project unopim/unopim . --no-interaction \
-  && composer require unopim/shopify-connector unopim/dam --no-interaction \
-  && composer install --no-dev --optimize-autoloader
-
+ && composer require unopim/shopify-connector unopim/dam --no-interaction \
+ && composer install --no-dev --optimize-autoloader
 
 # ---------- Node/Vite build stage ----------
 FROM node:20-alpine AS assets
@@ -49,12 +48,10 @@ RUN set -eux; \
     npm run build; \
   fi
 
-
 # ---------- Runtime stage ----------
 FROM php:8.2-fpm-alpine
 
-RUN apk add --no-cache \
-    nginx supervisor bash busybox-extras \
+RUN apk add --no-cache nginx supervisor bash busybox-extras \
     icu-dev libzip-dev oniguruma-dev \
     postgresql-dev mariadb-dev \
     freetype-dev libjpeg-turbo-dev libpng-dev libwebp-dev \
@@ -62,23 +59,21 @@ RUN apk add --no-cache \
   && docker-php-ext-install \
     pdo pdo_pgsql pdo_mysql \
     intl gd zip opcache calendar \
-  \
-  # Ensure php-fpm listens on TCP 127.0.0.1:9000 (nginx uses fastcgi_pass 127.0.0.1:9000)
+  # Ensure php-fpm listens on TCP 9000 for nginx fastcgi_pass 127.0.0.1:9000
   && sed -i 's|^listen = .*|listen = 127.0.0.1:9000|' /usr/local/etc/php-fpm.d/www.conf \
-  && sed -i 's|^;clear_env = no|clear_env = no|' /usr/local/etc/php-fpm.d/www.conf \
-  \
-  # Make sure nginx has mime.types (Alpine nginx package provides it)
-  && test -f /etc/nginx/mime.types
+  && sed -i 's|^;clear_env = no|clear_env = no|' /usr/local/etc/php-fpm.d/www.conf
+
 
 WORKDIR /var/www/html
 
 # Copy FULL built app
 COPY --from=assets /app /var/www/html
 
-# Your configs
+# Configs
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY docker/supervisord.conf /etc/supervisord.conf
 
+# Permissions for Laravel
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
 ENV APP_ENV=production
